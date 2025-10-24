@@ -1,14 +1,23 @@
 {
   "name": "social-media-dashboard-2",
   "version": "1.0.0",
-  "description": "Copyright (c) 2025 Carlos Araujo",
-  "license": "MIT",
-  "author": "Carlos Araujo",
-  "type": "module",
-  "main": "app.js",
+  "description": "",
+  "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/carlos-araujo-aus/Social-Media-Dashboard.git"
+  },
+  "keywords": [],
+  "author": "Carlos Araujo",
+  "license": "MIT",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/carlos-araujo-aus/Social-Media-Dashboard/issues"
+  },
+  "homepage": "https://github.com/carlos-araujo-aus/Social-Media-Dashboard#readme",
   "dependencies": {
     "bcrypt": "^6.0.0",
     "body-parser": "^2.2.0",
