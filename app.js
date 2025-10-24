@@ -1,3 +1,4 @@
+//All the imports
 import express from 'express';
 import dotenv from 'dotenv';
 import session from 'express-session';
@@ -6,6 +7,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { UserModel, PostModel } from "./model/schemas.js";
 
+//Config of the projecyt
 dotenv.config();
 
 const app = express();
@@ -16,7 +18,8 @@ const saltRounds = 10;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }))
 
-mongoose.connect(uri, { dbName: 'socialUsersDB' })
+//Connect to the DB
+const mongoDB = () => {mongoose.connect(uri, { dbName: 'socialUsersDB' })
     .then(() => {
         console.log("✅Connected to MongoDB✅");
     })
@@ -25,11 +28,14 @@ mongoose.connect(uri, { dbName: 'socialUsersDB' })
         mongoose.connection.close();
         console.log("⛔Conection Closed⛔");
     });
+}
+//mongoDB()
 
 app.get("/home", (req, res) => {
     res.json({ Message: "🎉Server is runin from root endpoint🎉" })
 });
 
+//Register a new user
 app.post("/register", async (req, res, next) => {
     const dataRegister = req.body;
 
@@ -55,6 +61,7 @@ app.post("/register", async (req, res, next) => {
     }
 });
 
+//Login
 app.post("/login", async (req, res, next) => {
     const dataLogin = req.body;
 
@@ -81,11 +88,27 @@ app.post("/login", async (req, res, next) => {
     }
 });
 
+//Get all users
+app.get("/users", async (req, res, next) => {
+    try {
+        const allUsers = await UserModel.find()
+        if (allUsers.length === 0) {
+            res.status(200).json({ message: "There are no users registered yet"})
+            return;
+        } else {
+            const usernames = allUsers.map(user => user.username);
 
-app.get("/dashboard", (req, res) => {
-    res.json({ Message: "This is the DASHBOARD endpoint"});
-});
+            res.status(200).json({
+                Quantity: allUsers.length,
+                Usernames: usernames
+            })
+        }
+    } catch (error) {
+        next(error)
+    }
+})
 
+//Post a post
 app.post("/post", async (req, res, next) => {
     try {
         const data = req.body
@@ -101,9 +124,53 @@ app.post("/post", async (req, res, next) => {
             res.status(201).json({ message: "Post registered succesfully" });
         }
     } catch (error) {
+        next(error)
+    };
+});
+
+//Get all posts
+app.get("/dashboard", async (req, res, next) => {
+    try {
+        const allPosts = await PostModel.find()
+        if (allPosts.length === 0){
+            res.status(200).json({ message: "There are no posts yet" })
+        } else{
+            res.status(200).json(allPosts)
+        }       
+    } catch (error) {
+        next(error)
+    } 
+});
+
+//Get posts by username
+app.get("/dashboard/:username", async (req, res, next) => {
+    try {
+        const username = req.params.username;
+        console.log("Username is: ", username);
+        const usernameFind = await UserModel.findOne({username: username});
+        console.log(usernameFind);
+        if (!usernameFind) {
+            res.status(404).json({ message: `There is no user with that username: ${username}` });
+            return;
+        } else {
+            const userId = usernameFind._id;
+            console.log("UserId is: ", userId);
+            const postsOfUser = await PostModel.find({userId: userId});
+            console.log("Posts of the user: ", postsOfUser);
+            res.status(200).json({
+                username: username,
+                posts: postsOfUser,
+                message: postsOfUser.length === 0 ? `The user ${username} does not have any post yet` : undefined,
+            });            
+        }
+    } catch (error) {
         next(error);
     }
 });
+
+//Update post
+
+//Delete a post
 
 //Block automatic request from browser
 app.get("/favicon.ico", (req, res) => res.status(204).end());
@@ -128,6 +195,7 @@ app.use((err, req, res, next) => {
     })
 })
 
+//Start to listen the port
 app.listen(port, () => {
     console.log(`🚀Server running on http://localhost:${port}`)
 });
