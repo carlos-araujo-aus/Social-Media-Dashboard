@@ -11,6 +11,7 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3000;
 const uri = process.env.MONGODB_URI;
+const saltRounds = 10;
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }))
@@ -30,37 +31,78 @@ app.get("/home", (req, res) => {
 });
 
 app.post("/register", async (req, res, next) => {
-    const data = req.body;
-
-    let email = data["email"];
+    const dataRegister = req.body;
 
     try {
-        const findUser = await UserModel.findOne({ email: email })
+        const findUser = await UserModel.findOne({ email: dataRegister["email"] })
 
         if (findUser) {
-            res.send("User already exist");
+            res.status(400).json({ message: "User already exists" });
             return;            
         } else {
+            let passwordHashed = await bcrypt.hash(dataRegister["password"], saltRounds);
             const user = new UserModel({
-                "email": data["email"],
-                "password": data["password"],
-                "username": data["username"],
-                "age": parseInt(data["age"]),
+                "email": dataRegister["email"],
+                "password": passwordHashed,
+                "username": dataRegister["username"],
+                "age": parseInt(dataRegister["age"]),
             });
             await user.save();
-            res.send("User registered succesfully")
+            res.status(201).json({ message: "User registered succesfully" });
         }
     } catch (error) {
         next(error);
     }
 });
 
-app.post("/login", (req, res) => {
-    res.json({ Message: "This is the LOGIN endpoint"});
+app.post("/login", async (req, res, next) => {
+    const dataLogin = req.body;
+
+    let email = dataLogin["email"];
+    
+    try {
+        const userToLogin = await UserModel.findOne({ email: email });
+        
+        if (userToLogin) {
+            let password = dataLogin["password"];
+            let pswMatch = await bcrypt.compare(password, userToLogin["password"]);
+            if (!pswMatch) {
+                res.status(401).json({ message: "Please verify your credentials" });
+                return
+            } else {
+                res.redirect("/dashboard");
+            }
+        } else {
+            res.status(404).json({ message: "User not found, please register to login" });
+            return;
+        }
+    } catch (error) {
+        next(error);
+    }
 });
+
 
 app.get("/dashboard", (req, res) => {
     res.json({ Message: "This is the DASHBOARD endpoint"});
+});
+
+app.post("/post", async (req, res, next) => {
+    try {
+        const data = req.body
+        if (!data) {
+            res.status(401).json({ message: "No text on this post. Please fill the form" });
+            return;
+        } else {
+            const post = new PostModel({
+                "userId": data["userId"],
+                "text": data["text"],
+            })
+            await post.save();
+            res.status(201).json({ message: "Post registered succesfully" });
+        }
+    } catch (error) {
+        next(error);
+    }
 });
 
 //Block automatic request from browser
