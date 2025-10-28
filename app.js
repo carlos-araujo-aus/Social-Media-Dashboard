@@ -29,7 +29,7 @@ const mongoDB = () => {mongoose.connect(uri, { dbName: 'socialUsersDB' })
         console.log("⛔Conection Closed⛔");
     });
 }
-//mongoDB()
+mongoDB()
 
 app.get("/home", (req, res) => {
     res.json({ Message: "🎉Server is runin from root endpoint🎉" })
@@ -146,17 +146,13 @@ app.get("/dashboard", async (req, res, next) => {
 app.get("/dashboard/:username", async (req, res, next) => {
     try {
         const username = req.params.username;
-        console.log("Username is: ", username);
         const usernameFind = await UserModel.findOne({username: username});
-        console.log(usernameFind);
         if (!usernameFind) {
             res.status(404).json({ message: `There is no user with that username: ${username}` });
             return;
         } else {
             const userId = usernameFind._id;
-            console.log("UserId is: ", userId);
             const postsOfUser = await PostModel.find({userId: userId});
-            console.log("Posts of the user: ", postsOfUser);
             res.status(200).json({
                 username: username,
                 posts: postsOfUser,
@@ -169,8 +165,38 @@ app.get("/dashboard/:username", async (req, res, next) => {
 });
 
 //Update post
+app.put("/updatepost/:postid", async (req, res, next) => {
+    try {
+        const postId = req.params.postid
+        const newText = req.body.newText
+
+        if (!newText || newText.trim().length === 0) {
+            res.status(400).json({ message: "Enter the new text of the post" })
+            return;
+        }
+        const update = await PostModel.updateOne({_id:postId},{text: newText.trim()})   
+
+        if (update.matchedCount === 0) {
+            res.status(404).json({ message: "There is no post with that postId"});
+            return;
+        } else {
+            res.status(200).json({ message: "Post updated" }); 
+        }
+    } catch (error) {
+        next(error);
+    }
+})
 
 //Delete a post
+app.delete("/deletepost/:postid", async (req, res, next) => {
+    try {
+        const postId = req.params.postid
+        const postToDelet = await PostModel.findById(postId)
+        console.log(postToDelet)
+    } catch (error) {
+        next(error)
+    }
+})
 
 //Block automatic request from browser
 app.get("/favicon.ico", (req, res) => res.status(204).end());
