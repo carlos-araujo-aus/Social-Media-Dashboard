@@ -5,7 +5,7 @@ import session from 'express-session';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
-import { UserModel, PostModel } from "./model/schemas.js";
+import { UserModel, PostModel } from "./models/schemas.js";
 
 //Config of the projecyt
 dotenv.config();
@@ -18,6 +18,8 @@ const saltRounds = 10;
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }))
+app.use(express.static("public"))
+
 
 //Connect to the DB
 const mongoDB = () => {mongoose.connect(uri, { dbName: 'socialUsersDB' })
@@ -83,17 +85,13 @@ app.post("/register", async (req, res, next) => {
 //Login
 app.post("/login", async (req, res, next) => {
     const dataLogin = req.body;
-
     let email = dataLogin["email"];
     
     try {
         const userToLogin = await UserModel.findOne({ email: email });
-        console.log("1: ", userToLogin)
         if (userToLogin) {
             let password = dataLogin["password"];
-            console.log("2: ", password)
             let pswMatch = await bcrypt.compare(password, userToLogin["password"]);
-            console.log("3: ", pswMatch)
             if (!pswMatch) {
                 res.status(401).json({ message: "Please verify your credentials" });
                 return
@@ -102,7 +100,6 @@ app.post("/login", async (req, res, next) => {
                 req.session.userId = userToLogin._id;
                 res.status(200).json({ 
                     message: "Loggin successful",
-                    redirectTo: "/dashboard"
                  })
             }
         } else {
