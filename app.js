@@ -13,6 +13,7 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3000;
 const uri = process.env.MONGODB_URI;
+const sessionSecret = process.env.SESSION_SECRET
 const saltRounds = 10;
 
 app.use(express.json());
@@ -31,8 +32,26 @@ const mongoDB = () => {mongoose.connect(uri, { dbName: 'socialUsersDB' })
 }
 mongoDB()
 
+//Middelware to handle session
+app.use(session({
+    cookie: { maxAge: 120000 },
+    secret: sessionSecret,
+    resave: false,
+    saveUninitialized: false
+}));
+
+//Function to handle authorization
+const requireAuth = (req, res, next) => {
+    if (req.session && req.session.username) {
+        next();
+    } else {
+        res.status(401).json({ message: "Unauthorized. Please login first" })
+    }
+}
+
+
 app.get("/home", (req, res) => {
-    res.json({ Message: "🎉Server is runin from root endpoint🎉" })
+    res.json({ Message: "🎉this is the home endpoint🎉" })
 });
 
 //Register a new user
@@ -69,15 +88,22 @@ app.post("/login", async (req, res, next) => {
     
     try {
         const userToLogin = await UserModel.findOne({ email: email });
-        
+        console.log("1: ", userToLogin)
         if (userToLogin) {
             let password = dataLogin["password"];
+            console.log("2: ", password)
             let pswMatch = await bcrypt.compare(password, userToLogin["password"]);
+            console.log("3: ", pswMatch)
             if (!pswMatch) {
                 res.status(401).json({ message: "Please verify your credentials" });
                 return
             } else {
-                res.redirect("/dashboard");
+                req.session.username = userToLogin.username;
+                req.session.userId = userToLogin._id;
+                res.status(200).json({ 
+                    message: "Loggin successful",
+                    redirectTo: "/dashboard"
+                 })
             }
         } else {
             res.status(404).json({ message: "User not found, please register to login" });
@@ -89,7 +115,7 @@ app.post("/login", async (req, res, next) => {
 });
 
 //Get all users
-app.get("/users", async (req, res, next) => {
+app.get("/users", requireAuth, async (req, res, next) => {
     try {
         const allUsers = await UserModel.find()
         if (allUsers.length === 0) {
@@ -109,7 +135,7 @@ app.get("/users", async (req, res, next) => {
 })
 
 //Post a post
-app.post("/post", async (req, res, next) => {
+app.post("/post", requireAuth, async (req, res, next) => {
     try {
         const data = req.body
         if (!data) {
@@ -117,7 +143,7 @@ app.post("/post", async (req, res, next) => {
             return;
         } else {
             const post = new PostModel({
-                "userId": data["userId"],
+                "userId": req.session.userId,
                 "text": data["text"],
             })
             await post.save();
@@ -129,7 +155,7 @@ app.post("/post", async (req, res, next) => {
 });
 
 //Get all posts
-app.get("/dashboard", async (req, res, next) => {
+app.get("/dashboard", requireAuth,async (req, res, next) => {
     try {
         const allPosts = await PostModel.find()
         if (allPosts.length === 0){
@@ -143,7 +169,7 @@ app.get("/dashboard", async (req, res, next) => {
 });
 
 //Get posts by username
-app.get("/dashboard/:username", async (req, res, next) => {
+app.get("/dashboard/:username", requireAuth, async (req, res, next) => {
     try {
         const username = req.params.username;
         const usernameFind = await UserModel.findOne({username: username});
@@ -164,8 +190,25 @@ app.get("/dashboard/:username", async (req, res, next) => {
     }
 });
 
+//Get My posts
+app.get("/my-posts", requireAuth, async (req, res, next) => {
+    try {
+        const userIdnow = req.session.userId
+        const myPosts = await PostModel.find({userId: userIdnow});
+        console.log(myPosts)
+        if (myPosts.length === 0) {
+            res.status(404).json({ message: "You do not have posts yet" })
+            return;
+        }
+        const allMyPosts = myPosts.map(posts => posts.text);
+        res.status(200).json({ message:"This are your posts: ", text: allMyPosts })
+    } catch (error) {
+        next(error)
+    }
+})
+
 //Update post
-app.put("/updatepost/:postid", async (req, res, next) => {
+app.put("/updatepost/:postid", requireAuth, async (req, res, next) => {
     try {
         const postId = req.params.postid
         const newText = req.body.newText
@@ -174,29 +217,65 @@ app.put("/updatepost/:postid", async (req, res, next) => {
             res.status(400).json({ message: "Enter the new text of the post" })
             return;
         }
+
+        const postFinded = await PostModel.findOne({_id:postId, userId: req.session.userId})
+
+        if (!postFinded) {
+            res.status(404).json({ message: "Post not found or unauthorized" });
+            return;
+        }
+        
         const update = await PostModel.updateOne({_id:postId},{text: newText.trim()})   
 
         if (update.matchedCount === 0) {
-            res.status(404).json({ message: "There is no post with that postId"});
+            res.status(404).json({ message: "No post updated"});
             return;
-        } else {
-            res.status(200).json({ message: "Post updated" }); 
         }
+        
+        res.status(200).json({ message: "Post updated" }); 
+        
     } catch (error) {
         next(error);
     }
 })
 
 //Delete a post
-app.delete("/deletepost/:postid", async (req, res, next) => {
+app.delete("/deletepost/:postid", requireAuth, async (req, res, next) => {
     try {
         const postId = req.params.postid
-        const postToDelet = await PostModel.findById(postId)
-        console.log(postToDelet)
+        const postFinded = await PostModel.findOne({_id: postId, userId: req.session.userId})
+
+        if (!postFinded) {
+            res.status(404).json({ message: "Post not found or unauthorized" })
+            return;
+        }
+
+        const postToDelete = await PostModel.deleteOne({_id:postId})
+
+        if (postToDelete.deletedCount === 0) {
+            res.status(404).json({ message: "There is no post with that postId" })
+            return
+        }
+        res.status(200).json({ message: `The post was deleted: ${postToDelete.deletedCount}` })
     } catch (error) {
         next(error)
     }
 })
+
+//Get endpoint for the logout
+app.get("/logout", requireAuth, (req, res, next) => {
+    req.session.destroy((err) => {
+        if (err) {
+            res.status(400).json({ message: "Error logging out", Error: err });
+            return;
+        }
+        res.cookie("username", "", { expires: new Date(0) });
+        res.status(200).json({ 
+            message: "Logged out successful",
+            redirectTo: "/home"
+         });
+    });
+});
 
 //Block automatic request from browser
 app.get("/favicon.ico", (req, res) => res.status(204).end());
