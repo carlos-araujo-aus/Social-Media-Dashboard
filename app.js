@@ -6,6 +6,7 @@ import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { UserModel, PostModel } from "./models/schemas.js";
+import { stringify } from 'path-to-regexp';
 
 //Config of the projecyt
 dotenv.config();
@@ -120,6 +121,8 @@ app.get("/users", requireAuth, async (req, res, next) => {
             return;
         } else {
             const usernames = allUsers.map(user => user.username);
+            console.log(allUsers)
+            console.log(usernames)
 
             res.status(200).json({
                 Quantity: allUsers.length,
@@ -152,13 +155,31 @@ app.post("/post", requireAuth, async (req, res, next) => {
 });
 
 //Get all posts
-app.get("/dashboard", requireAuth,async (req, res, next) => {
+app.get("/all-posts", requireAuth,async (req, res, next) => {
     try {
         const allPosts = await PostModel.find()
         if (allPosts.length === 0){
             res.status(200).json({ message: "There are no posts yet" })
         } else{
-            res.status(200).json(allPosts)
+            
+            const allUsers = await UserModel.find()
+            
+            if (allUsers.length === 0 ) {
+                res.status(400).json({ message: "No users found" })
+            }
+           
+            const idsWithUsernames = Object.fromEntries(
+                allUsers.map(i => [i._id.toString(), i.username])
+            );
+
+            const postsWithUsernames = allPosts.map(i => ({
+                postId: i._id.toString(),
+                userId: i.userId.toString(),
+                username: idsWithUsernames[i.userId.toString()] || "Unknown Username",
+                text: i.text,
+                createdAt: i.createdAt
+            }))
+            res.status(200).json(postsWithUsernames)
         }       
     } catch (error) {
         next(error)
@@ -166,7 +187,7 @@ app.get("/dashboard", requireAuth,async (req, res, next) => {
 });
 
 //Get posts by username
-app.get("/dashboard/:username", requireAuth, async (req, res, next) => {
+app.get("/postbyusername/:username", requireAuth, async (req, res, next) => {
     try {
         const username = req.params.username;
         const usernameFind = await UserModel.findOne({username: username});
@@ -194,11 +215,19 @@ app.get("/my-posts", requireAuth, async (req, res, next) => {
         const myPosts = await PostModel.find({userId: userIdnow});
         console.log(myPosts)
         if (myPosts.length === 0) {
-            res.status(404).json({ message: "You do not have posts yet" })
+            res.status(200).json({ 
+                message: "You do not have posts yet",
+                allMyPosts: [],
+                username: req.session.username
+            });
             return;
         }
-        const allMyPosts = myPosts.map(posts => posts.text);
-        res.status(200).json({ message:"This are your posts: ", text: allMyPosts })
+        const allMyPosts = myPosts.map(post => ({
+            date: post.createdAt,
+            text: post.text,
+            id: post._id
+        }));
+        res.status(200).json({ allMyPosts, username: req.session.username })
     } catch (error) {
         next(error)
     }
@@ -269,7 +298,6 @@ app.get("/logout", requireAuth, (req, res, next) => {
         res.cookie("username", "", { expires: new Date(0) });
         res.status(200).json({ 
             message: "Logged out successful",
-            redirectTo: "/home"
          });
     });
 });

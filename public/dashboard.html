@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width", initial-scale="1.0">
+        <title>Dashboard - Social Media</title>
+        <link rel="stylesheet" href="./css/styles.css">
+    </head>
+    <body>
+        <div class="container" style="text-align: center; margin-top: 1rem;">
+            <h1>
+                Wellcome to your dashboard
+            </h1>
+            <div class="nav-buttons">
+                <button 
+                class="btn-nav" id="mypostsbtn"">My Posts
+                </button>
+                <button
+                class="btn-nav" id="allPosts"">Check All Posts
+                </button>
+                <button
+                class="btn-nav" id="logout">Logout
+                </button>
+            </div></br>
+            <div class="users-buttons">
+                <h2>
+                    Users
+                </h2>
+                <button
+                class="btn-nav" onclick="handleAllUsers()">List All Users
+                </button>
+                <button
+                class="btn-nav" onclick="handleUserByUsername()">Search Posts by Username
+                </button>
+            </div>
+            <div class="create-post">
+                <h2>
+                    Share Someting!
+                </h2>
+                <form id="postForm" class="post-form">
+                    <textarea 
+                        id="postText" placeholder="Share your thoughts..." required>
+                    </textarea>
+                    <div class="post-actions">
+                        <div class="char-count">
+                            <span id = charCount>0</span>/500 characters
+                        </div>
+                        <button
+                            class="btn-primary" onclick="handlePostAPost()">Post
+                        </button>
+                    </div></br>
+                </form>
+            </div>
+            <div class="posts-container">
+                <div id="posts-loading" class="Loading">
+                </div>
+                <div 
+                    id="posts-list">
+                </div>
+            </div>
+        </div>
+        <script src="./js/handlers.js"> </script>
+    </body>
+</html>
