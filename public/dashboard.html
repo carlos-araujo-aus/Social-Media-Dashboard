@@ -27,38 +27,46 @@
                     Users
                 </h2>
                 <button
-                class="btn-nav" onclick="handleAllUsers()">List All Users
+                class="btn-nav" id="listAllUsers">List All Users
                 </button>
                 <button
-                class="btn-nav" onclick="handleUserByUsername()">Search Posts by Username
-                </button>
+                class="btn-nav" id="userByUsername">Search Posts by Username
+                </button></br></br>
+                <form id="findPostsForm" style="display: none">
+                    <div class="form-group">
+                        <label>
+                            User:
+                        </label>
+                        <input type="text" name="text" required>
+                    </div></br>
+                    <button class="btn-primary" type="submit" id="findPostsBtn">Submit</button>
+                </form>
             </div>
             <div class="create-post">
                 <h2>
                     Share Someting!
                 </h2>
                 <form id="postForm" class="post-form">
-                    <textarea 
-                        id="postText" placeholder="Share your thoughts..." required>
-                    </textarea>
+                    <textarea id="postText" name="postText" placeholder="Share your thoughts..." required></textarea>
                     <div class="post-actions">
                         <div class="char-count">
                             <span id = charCount>0</span>/500 characters
                         </div>
                         <button
-                            class="btn-primary" onclick="handlePostAPost()">Post
+                            type="submit" class="btn-primary" id="sendPost">Post
                         </button>
-                    </div></br>
+                    </div></br></br>
                 </form>
             </div>
             <div class="posts-container">
                 <div id="posts-loading" class="Loading">
                 </div>
                 <div 
-                    id="posts-list">
+                    id="posts-list" style="display: block">
                 </div>
             </div>
         </div>
         <script src="./js/handlers.js"> </script>
     </body>
 </html>
+

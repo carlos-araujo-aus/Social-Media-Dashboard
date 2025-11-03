@@ -52,7 +52,6 @@ const requireAuth = (req, res, next) => {
     }
 }
 
-
 app.get("/home", (req, res) => {
     res.json({ Message: "🎉this is the home endpoint🎉" })
 });
@@ -113,7 +112,7 @@ app.post("/login", async (req, res, next) => {
 });
 
 //Get all users
-app.get("/users", requireAuth, async (req, res, next) => {
+app.get("/all-users", requireAuth, async (req, res, next) => {
     try {
         const allUsers = await UserModel.find()
         if (allUsers.length === 0) {
@@ -125,8 +124,8 @@ app.get("/users", requireAuth, async (req, res, next) => {
             console.log(usernames)
 
             res.status(200).json({
-                Quantity: allUsers.length,
-                Usernames: usernames
+                quantity: allUsers.length,
+                usernames: usernames
             })
         }
     } catch (error) {
@@ -288,7 +287,7 @@ app.delete("/deletepost/:postid", requireAuth, async (req, res, next) => {
     }
 })
 
-//Get endpoint for the logout
+//Logout
 app.get("/logout", requireAuth, (req, res, next) => {
     req.session.destroy((err) => {
         if (err) {
